@@ -1,0 +1,68 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# Copyright (c) 2019 Colin Rofls
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+"""
+cargo-clean-all
+
+Recursively clean all cargo projects in a given directory.
+
+Accepts one optional argument, a directory. If no argument is provided,
+works from the current directory.
+"""
+
+import os
+import subprocess
+import sys
+
+def main():
+    search_path = None
+    if len(sys.argv) == 2:
+        search_path = sys.argv[1]
+    if len(sys.argv) > 2:
+        print("this script accepts a single optional argument")
+        sys.exit(1)
+
+    paths = get_paths(search_path)
+    print("cleaning {} paths{} {}".format(len(paths), ":\n" if len(paths) else "", '\n'.join(paths)))
+    for path in paths:
+        cargo_clean(path)
+
+def get_paths(base_path):
+    try:
+        output = subprocess.check_output("fd Cargo -e toml {}".format(base_path or ""), shell=True)
+        paths = [p for p in output.decode('utf-8').strip().split('\n') if p]
+        return paths
+    except subprocess.CalledProcessError as err:
+        print("'fd' failed. Is it installed?")
+        return None
+
+def cargo_clean(manifest_path):
+    print("cleaning {}".format(manifest_path))
+    try:
+        subprocess.check_call(["cargo", "clean", "--manifest-path={}".format(manifest_path)])
+    except subprocess.CalledProcessError as err:
+        print("failed to clean '{}'.".format(manifest_path))
+
+
+if __name__ == "__main__":
+    main()
